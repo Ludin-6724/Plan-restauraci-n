@@ -94,6 +94,8 @@ interface DataContextValue {
       truths: { text: string; block: Truth["block"] }[];
       seasonPhrase?: string;
       books?: { title: string; author: string }[];
+      purposeLabel?: string;
+      tradingEnabled?: boolean;
     }
   ) => void;
   forceSync: () => Promise<void>;
@@ -797,6 +799,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 })),
               };
             }
+
+            // Propósito y Trading: aplican a modo pack Y manual (no exclusivo de "manual").
+            next = {
+              ...next,
+              profile: {
+                ...next.profile,
+                settings: {
+                  ...next.profile.settings,
+                  purpose_label: manual?.purposeLabel?.trim() || "Propósito",
+                  trading_enabled: manual?.tradingEnabled ?? false,
+                },
+              },
+            };
           }
           const owner = userIdRef.current ?? next.owner_user_id ?? null;
           return {

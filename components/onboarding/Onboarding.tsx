@@ -31,6 +31,8 @@ export function Onboarding() {
   const [manualBooks, setManualBooks] = useState<{ title: string; author: string }[]>([]);
   const [manualBookTitle, setManualBookTitle] = useState("");
   const [manualBookAuthor, setManualBookAuthor] = useState("");
+  const [purposeLabel, setPurposeLabel] = useState("");
+  const [tradingEnabled, setTradingEnabled] = useState(false);
 
   const pack = getPack(packId);
   const planPreview = useMemo(
@@ -89,9 +91,13 @@ export function Onboarding() {
         primary: pri,
         note: focusNote.trim(),
       },
-      contentMode === "manual"
-        ? { truths: manualTruths, seasonPhrase: manualSeasonPhrase, books: manualBooks }
-        : undefined
+      {
+        truths: contentMode === "manual" ? manualTruths : [],
+        seasonPhrase: contentMode === "manual" ? manualSeasonPhrase : undefined,
+        books: contentMode === "manual" ? manualBooks : undefined,
+        purposeLabel,
+        tradingEnabled,
+      }
     );
     updateSettings({ audio_muted: true });
   };
@@ -102,7 +108,7 @@ export function Onboarding() {
         <div className="flex items-center gap-2 text-spiritual sticky top-0 bg-inherit pb-1 z-10">
           <TreePine />
           <span className="font-semibold tracking-wide">Bosque de Restauración</span>
-          <span className="ml-auto text-[10px] text-subtle">{step + 1}/5</span>
+          <span className="ml-auto text-[10px] text-subtle">{step + 1}/6</span>
         </div>
 
         {step === 0 && (
@@ -121,6 +127,36 @@ export function Onboarding() {
 
         {step === 1 && (
           <>
+            <h2 className="text-xl font-semibold text-ink">¿Por qué funciona esto?</h2>
+            <p className="text-muted text-sm leading-relaxed">
+              No es magia ni fuerza de voluntad. Son 3 ideas simples detrás del plan:
+            </p>
+            <ul className="text-sm text-muted space-y-3 list-disc pl-5">
+              <li>
+                <strong className="text-ink">Repetir verdades reentrena la mente automática.</strong>{" "}
+                Los pensamientos que se disparan solos (miedo, vergüenza, «no valgo») se grabaron con
+                repetición. Se cambian igual: repitiendo frases nuevas a diario hasta que se vuelven
+                automáticas también.
+              </li>
+              <li>
+                <strong className="text-ink">La respiración interrumpe el pánico en el cuerpo.</strong>{" "}
+                El pánico es una reacción física, no solo mental. Respirar pausado y guiado le manda
+                al cuerpo la señal de que no hay peligro real, y baja la intensidad en minutos.
+              </li>
+              <li>
+                <strong className="text-ink">90 días en fases, no todo a la vez.</strong> Intentar
+                arreglarlo todo junto agota y hace que abandones rápido. Ir por fases con metas
+                pequeñas es lo que sostiene el cambio en el tiempo.
+              </li>
+            </ul>
+            <PrimaryButton onClick={() => setStep(2)} className="w-full">
+              Entiendo, seguir
+            </PrimaryButton>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
             <h2 className="text-xl font-semibold text-ink">Límites de seguridad</h2>
             <ul className="text-sm text-muted space-y-2 list-disc pl-5">
               <li>No sustituye médico, psiquiatra o psicólogo.</li>
@@ -137,13 +173,13 @@ export function Onboarding() {
               />
               <span>He leído y acepto. Caminaré con paciencia.</span>
             </label>
-            <PrimaryButton onClick={() => accepted && setStep(2)} disabled={!accepted} className="w-full">
+            <PrimaryButton onClick={() => accepted && setStep(3)} disabled={!accepted} className="w-full">
               Continuar
             </PrimaryButton>
           </>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <>
             <h2 className="text-xl font-semibold text-ink">¿Qué se te activa?</h2>
             <p className="text-sm text-muted">
@@ -201,7 +237,7 @@ export function Onboarding() {
               placeholder="Ej. «No valgo si no me aprueban»…"
             />
             <PrimaryButton
-              onClick={() => setStep(3)}
+              onClick={() => setStep(4)}
               disabled={!focusIds.length || !primary}
               className="w-full"
             >
@@ -210,7 +246,7 @@ export function Onboarding() {
           </>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <>
             <h2 className="text-xl font-semibold text-ink">Tu plan de salida</h2>
             <p className="text-sm text-muted leading-relaxed border border-line rounded-xl p-3 bg-surface-soft/40">
@@ -220,6 +256,25 @@ export function Onboarding() {
               En la app verás <strong className="text-ink">Registrar</strong> por secciones: prioridad,
               calma, mente, propósito y estructura. Todas las funciones siguen ahí.
             </p>
+            <h3 className="text-sm font-semibold text-ink pt-1">Tu propósito</h3>
+            <TextInput
+              label="¿En qué querés poner tu enfoque? (estudio, arte, negocio, software, lo que sea)"
+              value={purposeLabel}
+              onChange={setPurposeLabel}
+              placeholder={
+                contentMode === "pack" ? pack.purpose_hint : "Ej. «Arte», «Mi negocio», «Estudio»…"
+              }
+            />
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={tradingEnabled}
+                onChange={(e) => setTradingEnabled(e.target.checked)}
+                className="mt-1 accent-primary"
+              />
+              <span>También quiero activar el módulo de Trading (journal, reglas de riesgo, PnL).</span>
+            </label>
+
             <h3 className="text-sm font-semibold text-ink pt-1">Tus frases</h3>
             <div className="flex rounded-2xl border border-line bg-surface-soft/50 p-1 gap-1">
               <button
@@ -385,7 +440,7 @@ export function Onboarding() {
             )}
 
             <PrimaryButton
-              onClick={() => setStep(4)}
+              onClick={() => setStep(5)}
               disabled={contentMode === "manual" && manualTruths.length < 1}
               className="w-full"
             >
@@ -394,7 +449,7 @@ export function Onboarding() {
           </>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <>
             <h2 className="text-xl font-semibold text-ink">Tu inicio</h2>
             <TextInput label="¿Cómo te llamas?" value={name} onChange={setName} placeholder="Tu nombre" />
@@ -431,7 +486,7 @@ export function Onboarding() {
             <button
               type="button"
               className="text-xs text-muted underline w-full text-center"
-              onClick={() => setStep(2)}
+              onClick={() => setStep(3)}
             >
               Volver a las preguntas
             </button>
