@@ -119,16 +119,16 @@ export default function PalabraPage() {
           </p>
         )}
 
-        {/* Texto del capítulo — contraste legible en todos los temas */}
+        {/* Texto del capítulo: fondo neutro, letras negras (sin verde) */}
         <div
-          className="bible-reader rounded-xl border border-line bg-surface-soft px-3.5 py-4 sm:px-5 sm:py-5 max-h-[min(70vh,36rem)] overflow-y-auto"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          className="bible-reader rounded-xl border border-black/10 bg-white px-3.5 py-4 sm:px-5 sm:py-5 max-h-[min(70vh,36rem)] overflow-y-auto"
+          style={{ WebkitOverflowScrolling: "touch", color: "#111111" }}
         >
-          <p className="text-[11px] uppercase tracking-wider text-primary font-medium mb-3">
+          <p className="text-[11px] uppercase tracking-wider font-medium mb-3 text-black/55">
             {passage.reference.split(":")[0]} · {BIBLE_VERSION_LABELS[version]}
           </p>
           {verses.length === 0 ? (
-            <p className="text-muted text-sm">Texto no disponible para este pasaje.</p>
+            <p className="text-sm text-black/60">Texto no disponible para este pasaje.</p>
           ) : (
             <div className="space-y-2.5">
               {verses.map((v) => {
@@ -138,13 +138,11 @@ export default function PalabraPage() {
                   <p
                     key={v.n}
                     id={`v-${v.n}`}
-                    className={`leading-[1.7] text-[15px] sm:text-base text-ink ${
-                      inFocus
-                        ? "bg-primary/10 border-l-2 border-primary pl-3 -ml-1 rounded-r-md py-0.5"
-                        : ""
+                    className={`leading-[1.75] text-[15px] sm:text-base text-black ${
+                      inFocus ? "font-medium" : "font-normal"
                     }`}
                   >
-                    <sup className="mr-1.5 text-[11px] font-semibold text-primary select-none">
+                    <sup className="mr-1.5 text-[11px] font-semibold text-black/45 select-none">
                       {v.n}
                     </sup>
                     {v.t}
@@ -153,7 +151,7 @@ export default function PalabraPage() {
               })}
             </div>
           )}
-          <p className="mt-4 pt-3 border-t border-line text-[10px] text-subtle leading-snug">
+          <p className="mt-4 pt-3 border-t border-black/10 text-[10px] text-black/40 leading-snug">
             {version === "rvr1960"
               ? "Reina-Valera 1960 © Sociedades Bíblicas Unidas. Uso personal de meditación."
               : "Nueva Traducción Viviente (NTV) © Tyndale House Foundation. Uso personal de meditación."}
