@@ -74,11 +74,11 @@ export default function PalabraPage() {
       <GlassCard className="space-y-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs text-emerald-200 uppercase tracking-wide">
+            <p className="text-xs text-primary uppercase tracking-wide font-medium">
               {passage.dayLabel} · {passage.focus}
             </p>
-            <h2 className="text-xl font-semibold text-white">{passage.title}</h2>
-            <p className="text-sm text-white/70">
+            <h2 className="text-xl font-semibold text-ink">{passage.title}</h2>
+            <p className="text-sm text-muted">
               {passage.reference}
               {hasFocusRange ? " · capítulo completo abajo" : ""}
             </p>
@@ -88,8 +88,8 @@ export default function PalabraPage() {
 
         {/* Selector de versión */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-white/55 uppercase tracking-wide">Versión</span>
-          <div className="inline-flex rounded-xl border border-white/15 bg-black/20 p-0.5">
+          <span className="text-xs text-muted uppercase tracking-wide">Versión</span>
+          <div className="inline-flex rounded-xl border border-line bg-surface-soft p-0.5">
             {(["rvr1960", "ntv"] as const).map((v) => {
               const active = version === v;
               return (
@@ -99,9 +99,10 @@ export default function PalabraPage() {
                   onClick={() => selectVersion(v)}
                   className={`px-3.5 py-1.5 text-sm rounded-[10px] transition-colors ${
                     active
-                      ? "bg-emerald-500/90 text-[#071a12] font-semibold shadow-sm"
-                      : "text-white/75 hover:text-white hover:bg-white/5"
+                      ? "bg-primary font-semibold shadow-sm"
+                      : "text-muted hover:text-ink hover:bg-surface-raised/60"
                   }`}
+                  style={active ? { color: "var(--on-primary, #fff)" } : undefined}
                   aria-pressed={active}
                 >
                   {BIBLE_VERSION_LABELS[v]}
@@ -112,22 +113,22 @@ export default function PalabraPage() {
         </div>
 
         {hasFocusRange && (
-          <p className="text-xs text-white/55 leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Porción del plan: vv. {focusStart}–{focusEnd}. El capítulo completo está para meditar;
             los versículos del plan se destacan suavemente.
           </p>
         )}
 
-        {/* Texto del capítulo */}
+        {/* Texto del capítulo — contraste legible en todos los temas */}
         <div
-          className="rounded-xl border border-white/10 bg-black/25 px-3.5 py-4 sm:px-5 sm:py-5 max-h-[min(70vh,36rem)] overflow-y-auto"
+          className="bible-reader rounded-xl border border-line bg-surface-soft px-3.5 py-4 sm:px-5 sm:py-5 max-h-[min(70vh,36rem)] overflow-y-auto"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <p className="text-[11px] uppercase tracking-wider text-emerald-200/80 mb-3">
+          <p className="text-[11px] uppercase tracking-wider text-primary font-medium mb-3">
             {passage.reference.split(":")[0]} · {BIBLE_VERSION_LABELS[version]}
           </p>
           {verses.length === 0 ? (
-            <p className="text-white/70 text-sm">Texto no disponible para este pasaje.</p>
+            <p className="text-muted text-sm">Texto no disponible para este pasaje.</p>
           ) : (
             <div className="space-y-2.5">
               {verses.map((v) => {
@@ -137,13 +138,13 @@ export default function PalabraPage() {
                   <p
                     key={v.n}
                     id={`v-${v.n}`}
-                    className={`leading-[1.7] text-[15px] sm:text-base ${
+                    className={`leading-[1.7] text-[15px] sm:text-base text-ink ${
                       inFocus
-                        ? "text-white bg-emerald-500/10 border-l-2 border-emerald-400/60 pl-3 -ml-1 rounded-r-md py-0.5"
-                        : "text-white/88"
+                        ? "bg-primary/10 border-l-2 border-primary pl-3 -ml-1 rounded-r-md py-0.5"
+                        : ""
                     }`}
                   >
-                    <sup className="mr-1.5 text-[11px] font-semibold text-emerald-300/90 select-none">
+                    <sup className="mr-1.5 text-[11px] font-semibold text-primary select-none">
                       {v.n}
                     </sup>
                     {v.t}
@@ -152,7 +153,7 @@ export default function PalabraPage() {
               })}
             </div>
           )}
-          <p className="mt-4 pt-3 border-t border-white/10 text-[10px] text-white/40 leading-snug">
+          <p className="mt-4 pt-3 border-t border-line text-[10px] text-subtle leading-snug">
             {version === "rvr1960"
               ? "Reina-Valera 1960 © Sociedades Bíblicas Unidas. Uso personal de meditación."
               : "Nueva Traducción Viviente (NTV) © Tyndale House Foundation. Uso personal de meditación."}
@@ -197,19 +198,19 @@ export default function PalabraPage() {
       </GlassCard>
 
       <GlassCard className="space-y-2">
-        <h3 className="text-sm font-semibold text-white">Plan de la semana</h3>
+        <h3 className="text-sm font-semibold text-ink">Plan de la semana</h3>
         <ul className="space-y-1">
           {PASSAGES.map((p) => (
             <li
               key={p.key}
               className={`text-sm flex justify-between gap-2 py-1 ${
-                p.dayIndex === dayIdx ? "text-emerald-200 font-medium" : "text-white/65"
+                p.dayIndex === dayIdx ? "text-primary font-medium" : "text-muted"
               }`}
             >
               <span>
                 {p.dayLabel}: {p.title}
               </span>
-              <span className="text-xs opacity-70">{p.focus}</span>
+              <span className="text-xs text-subtle">{p.focus}</span>
             </li>
           ))}
         </ul>
