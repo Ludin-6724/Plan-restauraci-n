@@ -1,0 +1,188 @@
+{
+  "name": "Bosque · Coach IA (cron semanal)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Domingo 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "Cron: 0 20 * * 0 = domingo 20:00 (hora del servidor n8n). Ajusta zona en settings de n8n."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://plan-restauraci-n.vercel.app/api/ai/cron",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"kind\": \"all\"\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-generate",
+      "name": "Generar insights (app)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 0],
+      "notes": "Configura credencial Header Auth: Name=Authorization Value=Bearer TU_N8N_CRON_SECRET\nO pega el header manualmente y quita authentication."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ok-check",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-ok",
+      "name": "¿OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [540, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "status",
+              "value": "Coach IA generado",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "count",
+              "value": "={{ $json.count }}",
+              "type": "number"
+            },
+            {
+              "id": "a3",
+              "name": "kinds",
+              "value": "={{ $json.kinds }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "success-set",
+      "name": "Éxito",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [780, -80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "status",
+              "value": "Error Coach IA",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "error",
+              "value": "={{ $json.error || $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "error-set",
+      "name": "Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [780, 100]
+    }
+  ],
+  "connections": {
+    "Domingo 20:00": {
+      "main": [
+        [
+          {
+            "node": "Generar insights (app)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar insights (app)": {
+      "main": [
+        [
+          {
+            "node": "¿OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿OK?": {
+      "main": [
+        [
+          {
+            "node": "Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
