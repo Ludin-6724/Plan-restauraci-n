@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useData } from "@/lib/data-context";
-import { PASSAGES, BLOCK_LABELS } from "@/lib/seeds/content";
+import { PASSAGES } from "@/lib/seeds/content";
 import {
   BIBLE_VERSION_LABELS,
   CHAPTERS,
@@ -18,6 +18,7 @@ import { todayISO, weekdayIndex } from "@/lib/plan-calendar";
 import { GlassCard, PageHeader, PrimaryButton, SecondaryButton, TextArea } from "@/components/ui/Glass";
 import { ArchiveItem, ArchiveSection, SaveBanner } from "@/components/ui/Archive";
 import { usePersist } from "@/lib/use-persist";
+import { NotesEditor } from "@/components/palabra/NotesEditor";
 import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 
 const VERSION_STORAGE_KEY = "bosque.bibleVersion";
@@ -155,19 +156,7 @@ export default function PalabraPage() {
     });
   };
 
-  /* ---------- Verdades: mismas, ordenadas por bloque ---------- */
-  const truthsByBlock = useMemo(() => {
-    const active = (data.truths || []).filter((t) => t.is_active);
-    const blocks: { block: string; label: string; items: typeof active }[] = [];
-    for (const b of Object.keys(BLOCK_LABELS) as (keyof typeof BLOCK_LABELS)[]) {
-      const items = active
-        .filter((t) => t.block === b)
-        .sort((a, c) => a.sort_order - c.sort_order);
-      if (items.length) blocks.push({ block: b, label: BLOCK_LABELS[b], items });
-    }
-    return blocks;
-  }, [data.truths]);
-
+  /* ---------- Historial de frases ---------- */
   const history = useMemo(
     () =>
       [...data.scripture_logs]
@@ -443,43 +432,16 @@ export default function PalabraPage() {
             </h3>
             {noteStatus && <span className="text-[11px] text-primary-bright">{noteStatus}</span>}
           </div>
-          <textarea
-            className="input-field min-h-[min(60vh,32rem)] leading-relaxed"
+          <NotesEditor
             value={noteText}
-            onChange={(e) => onNoteChange(e.target.value)}
-            placeholder="Escribe aquí tus notas de estudio de este capítulo: qué te dice Dios, qué no entiendes, qué vas a aplicar… Se guardan solas."
+            onChange={onNoteChange}
+            placeholder="Escribe aquí tus notas de estudio de este capítulo: qué te dice Dios, qué no entiendes, qué vas a aplicar… Usa la barra de formato. Se guardan solas."
           />
           <p className="text-[11px] text-subtle">
             Las notas son por capítulo y se guardan automáticamente en tu nube.
           </p>
         </GlassCard>
       </div>
-
-      {/* Verdades de la palabra (mismas, ordenadas por bloque) */}
-      <GlassCard className="space-y-3">
-        <h3 className="text-sm font-semibold text-ink">Verdades de la palabra</h3>
-        {truthsByBlock.length === 0 ? (
-          <p className="text-sm text-muted">No hay verdades activas. Actívalas en Verdades.</p>
-        ) : (
-          <div className="space-y-3">
-            {truthsByBlock.map((g) => (
-              <div key={g.block}>
-                <p className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">
-                  {g.label}
-                </p>
-                <ul className="space-y-1">
-                  {g.items.map((t) => (
-                    <li key={t.id} className="text-sm text-ink leading-relaxed flex gap-2">
-                      <span className="text-subtle select-none">·</span>
-                      {t.text}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-      </GlassCard>
 
       {/* Lectura del plan de hoy (sin cambios de lógica) */}
       <GlassCard className="space-y-4">

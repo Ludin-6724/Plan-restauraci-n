@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useData } from "@/lib/data-context";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { AppNav } from "@/components/nav/AppNav";
@@ -24,6 +24,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data, ready, user, cloudStatus } = useData();
   const supabaseConfigured = isSupabaseConfigured();
   const [authError, setAuthError] = useState<string | null>(null);
+  const pathname = usePathname();
+  // Estudio bíblico trabaja en dos columnas: necesita todo el ancho disponible
+  const wide = pathname?.startsWith("/palabra") ?? false;
 
   if (!ready) {
     return (
@@ -56,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppNav />
       <ForestAudio />
       <main className="main-pad relative z-20">
-        <div className="content-center">
+        <div className={`content-center${wide ? " content-center--wide" : ""}`}>
           <div className="flex justify-end mb-2">
             <span className="text-[10px] text-subtle uppercase tracking-wide">
               {cloudStatus === "syncing" && "Sincronizando…"}

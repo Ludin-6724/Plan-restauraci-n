@@ -429,6 +429,10 @@ body {
   .content-center {
     max-width: 48rem;
   }
+  /* Páginas de trabajo amplio (estudio bíblico) usan casi todo el ancho */
+  .content-center--wide {
+    max-width: min(88rem, 100%);
+  }
 }
 
 a > .glass-card:hover,
