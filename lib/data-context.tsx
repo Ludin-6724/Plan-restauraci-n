@@ -32,6 +32,8 @@ import type {
   TradingRules,
   Truth,
   TruthSession,
+  StudyNote,
+  VerseMark,
   WeeklyBoardCell,
 } from "./types";
 import type { RoutineBlock } from "./seeds/content";
@@ -78,6 +80,9 @@ interface DataContextValue {
   deleteBook: (id: string) => void;
   addBookNote: (bookId: string, content: string) => void;
   deleteBookNote: (id: string) => void;
+  saveStudyNote: (bookKey: string, chapter: number, content: string) => void;
+  saveVerseMark: (mark: Omit<VerseMark, "id" | "created_at"> & { id?: string }) => void;
+  deleteVerseMark: (id: string) => void;
   addReadingLog: (log: Omit<ReadingLog, "id">) => void;
   deleteReadingLog: (id: string) => void;
   setBoardCell: (weekStart: string, day: string, pillar: string, checked: boolean, panicScore?: number | null) => void;
@@ -483,6 +488,73 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         commit((prev) => ({
           ...prev,
           book_notes: (prev.book_notes || []).filter((n) => n.id !== id),
+        }));
+      },
+
+      saveStudyNote: (bookKey, chapter, content) => {
+        commit((prev) => {
+          const notes = prev.study_notes || [];
+          const existing = notes.find(
+            (n) => n.book_key === bookKey && n.chapter === chapter
+          );
+          const stamp = new Date().toISOString();
+          if (existing) {
+            return {
+              ...prev,
+              study_notes: notes.map((n) =>
+                n.id === existing.id ? { ...n, content, updated_at: stamp } : n
+              ),
+            };
+          }
+          const note: StudyNote = {
+            id: uid(),
+            book_key: bookKey,
+            chapter,
+            content,
+            updated_at: stamp,
+          };
+          return { ...prev, study_notes: [note, ...notes] };
+        });
+      },
+
+      saveVerseMark: (mark) => {
+        commit((prev) => {
+          const marks = prev.verse_marks || [];
+          const existing = marks.find(
+            (m) =>
+              m.book_key === mark.book_key &&
+              m.chapter === mark.chapter &&
+              m.verse === mark.verse
+          );
+          // Sin subrayado ni comentario: eliminar la marca si existe
+          if (!mark.color && !mark.comment.trim()) {
+            return existing ? { ...prev, verse_marks: marks.filter((m) => m.id !== existing.id) } : prev;
+          }
+          if (existing) {
+            return {
+              ...prev,
+              verse_marks: marks.map((m) =>
+                m.id === existing.id ? { ...m, color: mark.color, comment: mark.comment } : m
+              ),
+            };
+          }
+          const entry: VerseMark = {
+            id: mark.id ?? uid(),
+            book_key: mark.book_key,
+            chapter: mark.chapter,
+            verse: mark.verse,
+            color: mark.color,
+            comment: mark.comment,
+            created_at: new Date().toISOString(),
+          };
+          return { ...prev, verse_marks: [...marks, entry] };
+        });
+      },
+
+      deleteVerseMark: (id) => {
+        commit((prev) => ({
+          ...prev,
+          verse_marks: (prev.verse_marks || []).filter((m) => m.id !== id),
         }));
       },
 

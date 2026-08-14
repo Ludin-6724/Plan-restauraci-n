@@ -89,6 +89,8 @@ export function createInitialData(packId: ContentPackId = DEFAULT_PACK_ID): AppD
     daily_scores: [],
     weekly_board: [],
     phase_milestones: [],
+    study_notes: [],
+    verse_marks: [],
   };
   return applyPackToData(empty, packId);
 }
@@ -176,6 +178,8 @@ export function migrateData(raw: AppData): AppData {
   }
   if (!data.reading_logs) data.reading_logs = [];
   if (!Array.isArray(data.book_notes)) data.book_notes = [];
+  if (!Array.isArray(data.study_notes)) data.study_notes = [];
+  if (!Array.isArray(data.verse_marks)) data.verse_marks = [];
   if (!data.daily_scores) data.daily_scores = [];
   if (!data.reading) data.reading = [];
   if (!Array.isArray(data.books)) data.books = base.books;

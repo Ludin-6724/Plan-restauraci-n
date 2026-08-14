@@ -193,6 +193,27 @@ export interface ReadingLog {
   filter_keep: boolean | null;
 }
 
+/** Nota de estudio bíblico por capítulo (editor de /palabra). */
+export interface StudyNote {
+  id: string;
+  book_key: string;
+  chapter: number;
+  content: string;
+  updated_at: string;
+}
+
+/** Subrayado y/o comentario sobre un versículo. */
+export interface VerseMark {
+  id: string;
+  book_key: string;
+  chapter: number;
+  verse: number;
+  /** Clave de color ("yellow" | "green" | "blue" | "pink") o "" si no hay subrayado */
+  color: string;
+  comment: string;
+  created_at: string;
+}
+
 export interface WeeklyBoardCell {
   id: string;
   week_start: string;
@@ -246,4 +267,6 @@ export interface AppData {
   daily_scores: DailyScore[];
   weekly_board: WeeklyBoardCell[];
   phase_milestones: PhaseMilestone[];
+  study_notes: StudyNote[];
+  verse_marks: VerseMark[];
 }
