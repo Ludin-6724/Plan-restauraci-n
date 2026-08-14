@@ -24,6 +24,21 @@ export function ForestBackground() {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
   const [videoOk, setVideoOk] = useState<boolean | null>(null);
+  // El video (14 MB) se monta cuando el hilo está libre, no contra la carga inicial
+  const [idle, setIdle] = useState(false);
+
+  useEffect(() => {
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(() => setIdle(true), { timeout: 2500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(() => setIdle(true), 900);
+    return () => window.clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -69,7 +84,7 @@ export function ForestBackground() {
       {/* Cielo / atmósfera (también actúa de fallback mientras carga el video) */}
       <div className="forest-sky" />
 
-      {wantVideo && (
+      {wantVideo && idle && (
         <ForestVideo
           play={visible}
           onReady={() => setVideoOk(true)}

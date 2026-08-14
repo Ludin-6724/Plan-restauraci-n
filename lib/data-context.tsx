@@ -109,6 +109,26 @@ interface DataContextValue {
 
 const DataContext = createContext<DataContextValue | null>(null);
 
+/** Colecciones que applyDerivedSync lee: si ninguna cambió de referencia, se omite. */
+const DERIVED_INPUT_KEYS = [
+  "routines",
+  "weekly_board",
+  "phase_milestones",
+  "scripture_logs",
+  "truth_sessions",
+  "journal_entries",
+  "exercise_logs",
+  "software_sessions",
+  "trading_entries",
+  "books",
+  "book_notes",
+  "reading_logs",
+] as const;
+
+function derivedInputsChanged(a: AppData, b: AppData): boolean {
+  return DERIVED_INPUT_KEYS.some((k) => a[k] !== b[k]);
+}
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -118,6 +138,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const dataRef = React.useRef<AppData | null>(null);
   const userIdRef = React.useRef<string | null>(null);
+  /** Último día para el que corrió applyDerivedSync (rollover de día). */
+  const lastDerivedDate = React.useRef<string>("");
   const persistTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAuthId = React.useRef<string | null>(null);
 
@@ -159,9 +181,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Carga el plan de UN user:
-   * 1) nube (RLS por auth.uid) gana
-   * 2) local solo de ese userId
-   * 3) si no hay nada → fresco + onboarding (nunca el plan de otro correo)
+   * 1) Pinta al instante desde localStorage (solo datos de este user)
+   * 2) La nube llega en segundo plano y reconcilia (nube gana si existe)
+   * 3) Si no hay nada → fresco + onboarding (nunca el plan de otro correo)
    */
   const hydrateForUser = useCallback(async (u: User) => {
     // Quitar del UI el plan del usuario anterior de inmediato
@@ -169,24 +191,46 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (syncTimer.current) clearTimeout(syncTimer.current);
 
     userIdRef.current = u.id;
-    dataRef.current = null;
-    setData(null);
     setCloudStatus("syncing");
     hydrated.current = false;
+
+    // 1) Pintado instantáneo desde local (solo si es de este user y ya tiene plan)
+    const localRaw = loadData(u.id, { claimLegacy: true });
+    const localOwned =
+      localRaw.owner_user_id && localRaw.owner_user_id !== u.id ? null : localRaw;
+    const hasLocalPlan = !!localOwned && localOwned.profile.onboarding_done;
+
+    let painted: AppData | null = null;
+    if (hasLocalPlan && localOwned) {
+      painted = applyDerivedSync({ ...localOwned, owner_user_id: u.id }, todayISO());
+      dataRef.current = painted;
+      setData(painted);
+      // La UI ya puede trabajar mientras llega la nube
+      hydrated.current = true;
+    } else {
+      dataRef.current = null;
+      setData(null);
+    }
 
     try {
       const remote = await pullCloudData();
       // Si cambió de cuenta mientras esperábamos la red, abortar
       if (userIdRef.current !== u.id) return;
 
+      // Si el usuario editó algo mientras llegaba la nube, no pisar sus cambios
+      // (el sync normal ya los subirá)
+      const dirty = painted != null && dataRef.current !== painted;
+
       if (remote) {
         const migrated = migrateData(remote);
         // Defensa extra: si el snapshot trae dueño distinto, no usarlo
         if (migrated.owner_user_id && migrated.owner_user_id !== u.id) {
-          const fresh = applyDerivedSync(freshUserData(u.id), todayISO());
-          dataRef.current = fresh;
-          setData(fresh);
-          saveData(fresh, u.id);
+          if (!dirty) {
+            const fresh = applyDerivedSync(freshUserData(u.id), todayISO());
+            dataRef.current = fresh;
+            setData(fresh);
+            saveData(fresh, u.id);
+          }
           setCloudStatus("saved");
           hydrated.current = true;
           return;
@@ -195,42 +239,50 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           { ...migrated, owner_user_id: u.id },
           todayISO()
         );
-        dataRef.current = merged;
-        setData(merged);
-        saveData(merged, u.id);
+        if (!dirty) {
+          dataRef.current = merged;
+          setData(merged);
+          saveData(merged, u.id);
+        }
         setCloudStatus("saved");
         hydrated.current = true;
         return;
       }
 
-      // Sin snapshot en nube: local SOLO de este userId.
-      // claimLegacy una sola vez (tu plan pre-multi-usuario); correos nuevos no lo heredan.
-      const localRaw = loadData(u.id, { claimLegacy: true });
-      if (userIdRef.current !== u.id) return;
-
-      // Si por error el local es de otro dueño o quedó “terminado” sin ser de este user → fresco
-      let local = localRaw;
-      if (local.owner_user_id && local.owner_user_id !== u.id) {
-        local = freshUserData(u.id);
+      // Sin snapshot en nube
+      if (!painted) {
+        // local SOLO de este userId (claimLegacy ya corrió en loadData)
+        let local = localOwned ?? freshUserData(u.id);
+        local = applyDerivedSync({ ...local, owner_user_id: u.id }, todayISO());
+        dataRef.current = local;
+        setData(local);
+        saveData(local, u.id);
+        // Solo subir si YA completó onboarding en ESTE dispositivo para ESTA cuenta
+        if (local.profile.onboarding_done) {
+          void pushCloudData(local).then((r) => {
+            if (userIdRef.current !== u.id) return;
+            setCloudStatus(r.ok ? "saved" : "error");
+          });
+        } else {
+          setCloudStatus("saved");
+        }
+        hydrated.current = true;
+        return;
       }
 
-      local = applyDerivedSync({ ...local, owner_user_id: u.id }, todayISO());
-      dataRef.current = local;
-      setData(local);
-      saveData(local, u.id);
-
-      // Solo subir si YA completó onboarding en ESTE dispositivo para ESTA cuenta
-      if (local.profile.onboarding_done) {
-        void pushCloudData(local).then((r) => {
-          if (userIdRef.current !== u.id) return;
-          setCloudStatus(r.ok ? "saved" : "error");
-        });
-      } else {
-        setCloudStatus("saved");
-      }
+      // Pintado desde local y nube vacía → subir el plan local (como antes)
+      void pushCloudData(dataRef.current ?? painted).then((r) => {
+        if (userIdRef.current !== u.id) return;
+        setCloudStatus(r.ok ? "saved" : "error");
+      });
       hydrated.current = true;
     } catch {
       if (userIdRef.current !== u.id) return;
+      if (painted) {
+        // Ya hay UI con datos locales: solo marcar la nube como no disponible
+        setCloudStatus("offline");
+        return;
+      }
       setCloudStatus("error");
       const fallback = applyDerivedSync(freshUserData(u.id), todayISO());
       dataRef.current = fallback;
@@ -303,11 +355,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const base = prev ?? dataRef.current ?? createInitialData();
         const updated = updater(base);
         // Si el updater no cambió nada (p. ej. ensureDayRoutines), evita trabajo pesado
-        const next =
-          updated === base ? applyDerivedSync(base, todayISO()) : applyDerivedSync(updated, todayISO());
-        if (next === base) {
+        if (updated === base) {
           dataRef.current = base;
           return base;
+        }
+        // applyDerivedSync recorre todo el historial: solo correrlo cuando
+        // cambian las colecciones que lee (o cambió el día)
+        const today = todayISO();
+        const dayChanged = lastDerivedDate.current !== today;
+        let next = updated;
+        if (dayChanged || derivedInputsChanged(base, updated)) {
+          next = applyDerivedSync(updated, today);
+          lastDerivedDate.current = today;
         }
         dataRef.current = next;
         if (hydrated.current) schedulePersist(next);
@@ -953,45 +1012,49 @@ export function useData(): DataContextValue {
 
 export function useRoutineCompletion(date: string = todayISO()) {
   const { data } = useData();
-  const day = data.routines.filter((r) => r.date === date);
-  const total = ROUTINE_ITEMS.length;
-  const done = day.filter((r) => r.status === "done" || r.status === "partial").length;
-  const fullDone = day.filter((r) => r.status === "done").length;
-  return {
-    total,
-    done,
-    fullDone,
-    percent: total ? Math.round((done / total) * 100) : 0,
-  };
+  return useMemo(() => {
+    const day = data.routines.filter((r) => r.date === date);
+    const total = ROUTINE_ITEMS.length;
+    const done = day.filter((r) => r.status === "done" || r.status === "partial").length;
+    const fullDone = day.filter((r) => r.status === "done").length;
+    return {
+      total,
+      done,
+      fullDone,
+      percent: total ? Math.round((done / total) * 100) : 0,
+    };
+  }, [data.routines, date]);
 }
 
 export function useStreak() {
   const { data } = useData();
-  // Simple streak: consecutive days ending today with >= 80% done
-  let streak = 0;
-  const byDate = new Map<string, RoutineEntry[]>();
-  data.routines.forEach((r) => {
-    const list = byDate.get(r.date) ?? [];
-    list.push(r);
-    byDate.set(r.date, list);
-  });
-  const d = new Date();
-  for (let i = 0; i < 120; i++) {
-    const iso = formatLocalDate(d);
-    const list = byDate.get(iso) ?? [];
-    const done = list.filter((r) => r.status === "done" || r.status === "partial").length;
-    const pct = ROUTINE_ITEMS.length ? done / ROUTINE_ITEMS.length : 0;
-    if (pct >= 0.8) {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else if (i === 0) {
-      // today incomplete doesn't break past streak check — stop
-      break;
-    } else {
-      break;
+  return useMemo(() => {
+    // Simple streak: consecutive days ending today with >= 80% done
+    let streak = 0;
+    const byDate = new Map<string, RoutineEntry[]>();
+    data.routines.forEach((r) => {
+      const list = byDate.get(r.date) ?? [];
+      list.push(r);
+      byDate.set(r.date, list);
+    });
+    const d = new Date();
+    for (let i = 0; i < 120; i++) {
+      const iso = formatLocalDate(d);
+      const list = byDate.get(iso) ?? [];
+      const done = list.filter((r) => r.status === "done" || r.status === "partial").length;
+      const pct = ROUTINE_ITEMS.length ? done / ROUTINE_ITEMS.length : 0;
+      if (pct >= 0.8) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      } else if (i === 0) {
+        // today incomplete doesn't break past streak check — stop
+        break;
+      } else {
+        break;
+      }
     }
-  }
-  return streak;
+    return streak;
+  }, [data.routines]);
 }
 
 function formatLocalDate(d: Date): string {

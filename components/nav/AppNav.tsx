@@ -182,25 +182,10 @@ export function AppNav() {
     }
   }, []);
 
-  // Prefetch de rutas frecuentes (navegación más inmediata en móvil)
+  // Prefetch solo de las rutas de uso diario (antes eran 14: bajaba
+  // hasta el texto bíblico completo en cada visita, pegando en la carga inicial)
   useEffect(() => {
-    const hrefs = [
-      "/",
-      "/rutina",
-      "/diario",
-      "/verdades",
-      "/palabra",
-      "/ejercicio",
-      "/panico",
-      "/software",
-      ...(tradingEnabled ? ["/trading"] : []),
-      "/lecturas",
-      "/tablero",
-      "/archivo",
-      "/progreso",
-      "/ajustes",
-      "/santidad",
-    ];
+    const hrefs = ["/", "/rutina", "/diario", "/verdades", "/panico"];
     hrefs.forEach((h) => {
       try {
         router.prefetch(h);
@@ -208,7 +193,7 @@ export function AppNav() {
         /* ignore */
       }
     });
-  }, [router, tradingEnabled]);
+  }, [router]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("sidebar-open", open);
@@ -561,6 +546,9 @@ function RegisterSections({
 function ConfigMenu({ onGo }: { onGo: (href: string) => (e: MouseEvent) => void }) {
   const { data, updateProfile, user, cloudStatus, forceSync } = useData();
   const [syncMsg, setSyncMsg] = useState("");
+  // Nombre: edición local, commit al salir (evita un commit global por tecla)
+  const [nameDraft, setNameDraft] = useState(data.profile.name);
+  useEffect(() => setNameDraft(data.profile.name), [data.profile.name]);
 
   return (
     <div className="space-y-4">
@@ -572,8 +560,11 @@ function ConfigMenu({ onGo }: { onGo: (href: string) => (e: MouseEvent) => void 
             <span className="text-[11px] text-muted">Nombre</span>
             <input
               className="input-field !py-2"
-              value={data.profile.name}
-              onChange={(e) => updateProfile({ name: e.target.value })}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={() => {
+                if (nameDraft !== data.profile.name) updateProfile({ name: nameDraft });
+              }}
               placeholder="Tu nombre"
             />
           </label>

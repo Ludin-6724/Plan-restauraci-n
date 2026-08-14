@@ -27,7 +27,7 @@ export default function AjustesPage() {
       <div id="perfil">
       <GlassCard className="space-y-3">
         <h2 className="text-sm font-semibold text-ink">1 · Perfil</h2>
-        <TextInput label="Nombre" value={data.profile.name} onChange={(v) => updateProfile({ name: v })} />
+        <TextInput label="Nombre" value={data.profile.name} onCommit={(v) => updateProfile({ name: v })} />
         <TextInput
           label="Inicio del plan"
           type="date"
@@ -38,7 +38,7 @@ export default function AjustesPage() {
           label="Meta de hora de sueño"
           type="time"
           value={data.profile.settings.sleep_goal}
-          onChange={(v) => updateSettings({ sleep_goal: v })}
+          onCommit={(v) => updateSettings({ sleep_goal: v })}
         />
         <TextInput
           label="Umbral pánico para no tradear (1–10)"
@@ -103,7 +103,7 @@ export default function AjustesPage() {
         <TextInput
           label="Frase de temporada (panel Hoy)"
           value={data.profile.settings.season_phrase || pack.season_phrase}
-          onChange={(v) => updateSettings({ season_phrase: v })}
+          onCommit={(v) => updateSettings({ season_phrase: v })}
         />
         <p className="text-[11px] text-subtle">
           Tus verdades y registros no se borran al cambiar la frase. Las plantillas solo se eligen
@@ -182,14 +182,9 @@ export default function AjustesPage() {
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm text-muted">Volumen</span>
-          <input
-            type="range"
-            min={0.05}
-            max={0.6}
-            step={0.01}
+          <VolumeSlider
             value={data.profile.settings.audio_volume}
-            onChange={(e) => updateSettings({ audio_volume: Number(e.target.value) })}
-            className="w-full accent-primary"
+            onCommit={(v) => updateSettings({ audio_volume: v })}
           />
         </label>
         <div className="space-y-1.5">
@@ -265,5 +260,33 @@ export default function AjustesPage() {
         </SecondaryButton>
       </GlassCard>
     </div>
+  );
+}
+
+/** Slider de volumen: arrastra en local y guarda una sola vez al soltar. */
+function VolumeSlider({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
+  const [draft, setDraft] = useState(value);
+  const [dirty, setDirty] = useState(false);
+  const shown = dirty ? draft : value;
+  const commit = () => {
+    if (dirty && draft !== value) onCommit(draft);
+    setDirty(false);
+  };
+  return (
+    <input
+      type="range"
+      min={0.05}
+      max={0.6}
+      step={0.01}
+      value={shown}
+      onChange={(e) => {
+        setDraft(Number(e.target.value));
+        setDirty(true);
+      }}
+      onPointerUp={commit}
+      onKeyUp={commit}
+      onBlur={commit}
+      className="w-full accent-primary"
+    />
   );
 }

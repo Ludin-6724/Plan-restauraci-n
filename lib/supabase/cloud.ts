@@ -26,9 +26,10 @@ function mergeById<T extends { id: string }>(local: T[], remote: T[]): T[] {
 export async function pullCloudData(): Promise<AppData | null> {
   const sb = tryCreateClient();
   if (!sb) return null;
-  const { data: auth } = await sb.auth.getUser();
-  if (!auth.user) return null;
-  const userId = auth.user.id;
+  // getSession lee la sesión local (sin round-trip de red como getUser)
+  const { data: auth } = await sb.auth.getSession();
+  if (!auth.session?.user) return null;
+  const userId = auth.session.user.id;
 
   const { data, error } = await sb
     .from("app_snapshots")
@@ -189,9 +190,10 @@ export async function pullCloudData(): Promise<AppData | null> {
 export async function pushCloudData(appData: AppData): Promise<{ ok: boolean; error?: string }> {
   const sb = tryCreateClient();
   if (!sb) return { ok: false, error: "Sin Supabase" };
-  const { data: auth } = await sb.auth.getUser();
-  if (!auth.user) return { ok: false, error: "Sin sesión" };
-  const userId = auth.user.id;
+  // getSession lee la sesión local (sin round-trip de red como getUser)
+  const { data: auth } = await sb.auth.getSession();
+  if (!auth.session?.user) return { ok: false, error: "Sin sesión" };
+  const userId = auth.session.user.id;
 
   const today = todayISO();
   const prev = appData.daily_scores?.find((s) => s.date < today);
@@ -266,8 +268,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     sort_order: b.sort_order ?? 0,
     updated_at: new Date().toISOString(),
   }));
-  await upsertRows("books", books);
-
   const bookNotes = (app.book_notes ?? []).map((n) => ({
     id: n.id,
     user_id: userId,
@@ -275,7 +275,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     content: n.content,
     created_at: n.created_at || new Date().toISOString(),
   }));
-  await upsertRows("book_notes", bookNotes);
 
   const readingLogs = (app.reading_logs ?? []).map((l) => ({
     id: l.id,
@@ -286,7 +285,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     notes: l.notes || "",
     filter_keep: l.filter_keep,
   }));
-  await upsertRows("reading_logs", readingLogs);
 
   const softSess = (app.software_sessions ?? []).map((s) => ({
     id: s.id,
@@ -296,7 +294,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     deliverable: s.deliverable || "",
     notes: s.notes || "",
   }));
-  await upsertRows("software_sessions", softSess);
 
   const softWeek = (app.software_weekly ?? []).map((w) => ({
     id: w.id,
@@ -306,7 +303,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     done: !!w.done,
   }));
   // unique (user_id, week_start) — use id conflict
-  await upsertRows("software_weekly", softWeek);
 
   const trading = (app.trading_entries ?? []).map((t) => ({
     id: t.id,
@@ -318,7 +314,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     lesson: t.lesson || "",
     skipped_reason: t.skipped_reason || "",
   }));
-  await upsertRows("trading_entries", trading);
 
   const exercise = (app.exercise_logs ?? []).map((e) => ({
     id: e.id,
@@ -330,7 +325,6 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     rpe: e.rpe || 0,
     notes: e.notes || "",
   }));
-  await upsertRows("exercise_logs", exercise);
 
   const journal = (app.journal_entries ?? []).map((j) => ({
     id: j.id,
@@ -341,5 +335,15 @@ async function syncAllModuleTables(userId: string, app: AppData) {
     manana_hare: j.manana_hare || "",
     weekly_notes: j.weekly_notes || "",
   }));
-  await upsertRows("journal_entries", journal);
+  // Las 8 tablas suben en paralelo (antes eran secuenciales una por una)
+  await Promise.all([
+    upsertRows("books", books),
+    upsertRows("book_notes", bookNotes),
+    upsertRows("reading_logs", readingLogs),
+    upsertRows("software_sessions", softSess),
+    upsertRows("software_weekly", softWeek),
+    upsertRows("trading_entries", trading),
+    upsertRows("exercise_logs", exercise),
+    upsertRows("journal_entries", journal),
+  ]);
 }

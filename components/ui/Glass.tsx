@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 export function GlassCard({
   children,
@@ -114,13 +114,41 @@ export function TextInput({
   onChange,
   type = "text",
   placeholder,
+  onCommit,
 }: {
   label: string;
   value: string | number;
-  onChange: (v: string) => void;
+  onChange?: (v: string) => void;
   type?: string;
   placeholder?: string;
+  /** Modo "commit al salir": estado local por tecla, guarda solo en blur/Enter */
+  onCommit?: (v: string) => void;
 }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+
+  if (onCommit) {
+    const commit = () => {
+      if (draft !== String(value)) onCommit(draft);
+    };
+    return (
+      <label className="block space-y-1.5">
+        <span className="text-sm text-muted">{label}</span>
+        <input
+          className="input-field"
+          type={type}
+          value={draft}
+          placeholder={placeholder}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+        />
+      </label>
+    );
+  }
+
   return (
     <label className="block space-y-1.5">
       <span className="text-sm text-muted">{label}</span>
@@ -129,7 +157,7 @@ export function TextInput({
         type={type}
         value={value}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
       />
     </label>
   );
