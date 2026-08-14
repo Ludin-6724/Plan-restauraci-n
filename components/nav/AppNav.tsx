@@ -195,6 +195,55 @@ export function AppNav() {
     });
   }, [router]);
 
+  // El resto de rutas se precalienta cuando el hilo queda libre: la carga
+  // inicial no compite con nada y la navegación posterior es instantánea
+  useEffect(() => {
+    const rest = [
+      "/palabra",
+      "/ejercicio",
+      "/software",
+      ...(tradingEnabled ? ["/trading"] : []),
+      "/lecturas",
+      "/tablero",
+      "/santidad",
+      "/archivo",
+      "/progreso",
+      "/ajustes",
+    ];
+    const warm = () => {
+      rest.forEach((h) => {
+        try {
+          router.prefetch(h);
+        } catch {
+          /* ignore */
+        }
+      });
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(warm, { timeout: 6000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(warm, 3500);
+    return () => window.clearTimeout(t);
+  }, [router, tradingEnabled]);
+
+  // Al abrir la hoja de navegación el usuario ya va a elegir sección:
+  // precalienta de inmediato por si el idle aún no corre
+  useEffect(() => {
+    if (sheet !== "registrar") return;
+    registerHrefs.forEach((h) => {
+      try {
+        router.prefetch(h);
+      } catch {
+        /* ignore */
+      }
+    });
+  }, [sheet, registerHrefs, router]);
+
   useEffect(() => {
     document.documentElement.classList.toggle("sidebar-open", open);
     document.documentElement.classList.toggle("sidebar-closed", !open);
