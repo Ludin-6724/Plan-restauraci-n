@@ -234,7 +234,7 @@ export default function PalabraPage() {
         onChange={(e) => setCommentDraft(e.target.value)}
       />
       <div className="flex gap-2">
-        <PrimaryButton onClick={saveComment}>Guardar comentario</PrimaryButton>
+        <PrimaryButton onClick={saveComment} style={{ color: "#ffffff" }}>Guardar comentario</PrimaryButton>
         <SecondaryButton onClick={() => setSelectedVerse(null)}>Cerrar</SecondaryButton>
       </div>
     </div>
@@ -317,7 +317,7 @@ export default function PalabraPage() {
                     ? "bg-primary font-semibold shadow-sm"
                     : "text-muted hover:text-ink hover:bg-surface-raised/60"
                 }`}
-                style={active ? { color: "var(--on-primary, #fff)" } : undefined}
+                style={active ? { color: "#ffffff" } : undefined}
                 aria-pressed={active}
               >
                 {c}
@@ -341,7 +341,7 @@ export default function PalabraPage() {
                   ? "bg-primary font-semibold shadow-sm"
                   : "text-muted hover:text-ink hover:bg-surface-raised/60"
               }`}
-              style={active ? { color: "var(--on-primary, #fff)" } : undefined}
+              style={active ? { color: "#ffffff" } : undefined}
               aria-pressed={active}
             >
               {p === "biblia" ? "Biblia" : "Mis notas"}
@@ -371,7 +371,7 @@ export default function PalabraPage() {
                         ? "bg-primary font-semibold shadow-sm"
                         : "text-muted hover:text-ink hover:bg-surface-raised/60"
                     }`}
-                    style={active ? { color: "var(--on-primary, #fff)" } : undefined}
+                    style={active ? { color: "#ffffff" } : undefined}
                     aria-pressed={active}
                   >
                     {v === "paralela" ? "Paralela" : BIBLE_VERSION_LABELS[v]}
@@ -486,6 +486,7 @@ export default function PalabraPage() {
         <div className="flex flex-wrap gap-2">
           <PrimaryButton
             disabled={busy}
+            style={{ color: "#ffffff" }}
             onClick={() =>
               void persist(
                 () => {

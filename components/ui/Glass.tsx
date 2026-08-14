@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 
 export function GlassCard({
   children,
@@ -38,12 +38,14 @@ export function PrimaryButton({
   type = "button",
   className = "",
   disabled,
+  style,
 }: {
   children: ReactNode;
   onClick?: () => void;
   type?: "button" | "submit";
   className?: string;
   disabled?: boolean;
+  style?: CSSProperties;
 }) {
   return (
     <button
@@ -52,7 +54,7 @@ export function PrimaryButton({
       disabled={disabled}
       className={`btn-primary ${className}`}
       /* color por CSS var: en Blanco ThemeEffect pone --on-primary en blanco */
-      style={{ color: "var(--on-primary)" }}
+      style={{ color: "var(--on-primary)", ...style }}
     >
       {children}
     </button>
