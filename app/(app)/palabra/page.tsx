@@ -312,7 +312,7 @@ export default function PalabraPage() {
                 key={c}
                 type="button"
                 onClick={() => setChapterNum(c)}
-                className={`w-9 py-1.5 text-sm rounded-[10px] transition-colors ${
+                className={`seg-btn w-9 py-1.5 text-sm rounded-[10px] transition-colors ${
                   active
                     ? "bg-primary font-semibold shadow-sm"
                     : "text-muted hover:text-ink hover:bg-surface-raised/60"
@@ -336,7 +336,7 @@ export default function PalabraPage() {
               key={p}
               type="button"
               onClick={() => setMobilePanel(p)}
-              className={`px-4 py-1.5 text-sm rounded-[10px] transition-colors ${
+              className={`seg-btn px-4 py-1.5 text-sm rounded-[10px] transition-colors ${
                 active
                   ? "bg-primary font-semibold shadow-sm"
                   : "text-muted hover:text-ink hover:bg-surface-raised/60"
@@ -366,7 +366,7 @@ export default function PalabraPage() {
                     key={v}
                     type="button"
                     onClick={() => selectView(v)}
-                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-[10px] transition-colors ${
+                    className={`seg-btn px-3 py-1.5 text-xs sm:text-sm rounded-[10px] transition-colors ${
                       active
                         ? "bg-primary font-semibold shadow-sm"
                         : "text-muted hover:text-ink hover:bg-surface-raised/60"

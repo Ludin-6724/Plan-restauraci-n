@@ -181,7 +181,7 @@ export function NotesEditor({
             aria-label={t.title}
             onClick={t.action}
             disabled={preview}
-            className="p-2 rounded-lg border border-line bg-surface-soft text-muted hover:text-ink hover:bg-surface-raised/70 transition disabled:opacity-40"
+            className="seg-btn p-2 rounded-lg border border-line bg-surface-soft text-muted hover:text-ink hover:bg-surface-raised/70 transition disabled:opacity-40"
           >
             {t.icon}
           </button>
@@ -189,7 +189,7 @@ export function NotesEditor({
         <button
           type="button"
           onClick={() => setPreview((v) => !v)}
-          className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+          className={`seg-btn ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
             preview
               ? "border-primary/40 bg-primary/12 text-ink"
               : "border-line bg-surface-soft text-muted hover:text-ink"

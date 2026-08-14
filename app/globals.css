@@ -2056,3 +2056,21 @@ html[data-theme="blanco"] .forest-vignette {
 .verse-hl-pink sup {
   color: rgba(255, 255, 255, 0.78);
 }
+
+/* Botones de selección (versión, capítulo, paneles) y herramientas del editor:
+   en tema Blanco el fondo verdoso con tinta oscura apenas contrasta →
+   fondo blanco + tinta casi negra. El estado activo sigue teal + blanco. */
+html[data-theme="blanco"] .seg-btn {
+  background: #ffffff;
+  color: #0a1210;
+  border: 1px solid rgba(11, 40, 32, 0.2);
+}
+html[data-theme="blanco"] .seg-btn:hover {
+  background: #f4f7f5;
+  color: #0a1210;
+}
+html[data-theme="blanco"] .seg-btn[aria-pressed="true"] {
+  background: #0f766e !important;
+  color: #ffffff !important;
+  border-color: #0b3d36 !important;
+}
