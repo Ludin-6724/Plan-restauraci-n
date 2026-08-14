@@ -26,10 +26,10 @@ const VERSION_STORAGE_KEY = "bosque.bibleVersion";
 type ReaderView = BibleVersion | "paralela";
 
 const HIGHLIGHTS: { key: string; label: string; swatch: string; verse: string }[] = [
-  { key: "yellow", label: "Amarillo", swatch: "bg-yellow-300", verse: "bg-yellow-200/80" },
-  { key: "green", label: "Verde", swatch: "bg-green-300", verse: "bg-green-200/80" },
-  { key: "blue", label: "Azul", swatch: "bg-sky-300", verse: "bg-sky-200/80" },
-  { key: "pink", label: "Rosa", swatch: "bg-pink-300", verse: "bg-pink-200/80" },
+  { key: "yellow", label: "Amarillo", swatch: "bg-yellow-300", verse: "verse-hl-yellow" },
+  { key: "green", label: "Verde", swatch: "bg-green-600", verse: "verse-hl-green" },
+  { key: "blue", label: "Azul", swatch: "bg-sky-700", verse: "verse-hl-blue" },
+  { key: "pink", label: "Rosa", swatch: "bg-pink-700", verse: "verse-hl-pink" },
 ];
 
 function highlightClass(color: string): string {
@@ -191,7 +191,7 @@ export default function PalabraPage() {
         <sup className="mr-1.5 text-[11px] font-semibold text-black/45 select-none">{n}</sup>
         {text}
         {mark?.comment ? (
-          <MessageSquare size={12} className="inline-block ml-1.5 -mt-0.5 text-primary" />
+          <MessageSquare size={12} className="inline-block ml-1.5 -mt-0.5 text-current opacity-70" />
         ) : null}
       </p>
     );
