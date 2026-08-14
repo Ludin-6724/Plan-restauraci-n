@@ -516,7 +516,8 @@ export function getDerivedVars(theme: ThemeDef): Record<string, string> {
     "--acc-35": rgba(primaryBright, 0.35),
     "--acc-13": rgba(primary, 0.13),
     "--primary-deep": darken(primary, 78),
-    "--on-primary": forestDeep,
+    /* Texto sobre fondos verdes: blanco en todos los temas oscuros */
+    "--on-primary": "#ffffff",
     "--input-bg": rgba(forestDeep, 0.72),
     "--breath-border": rgba(primaryBright, 0.72),
     "--breath-glow": rgba(primary, 0.2),

@@ -61,7 +61,7 @@
   --breath-border: rgba(110, 231, 165, 0.72);
   --breath-glow: rgba(34, 197, 94, 0.2);
   --breath-base: rgba(13, 42, 29, 0.55);
-  --on-primary: #071a12;
+  --on-primary: #ffffff;
   --video-scrim: linear-gradient(180deg, rgba(7, 26, 18, 0.72) 0%, rgba(13, 42, 29, 0.52) 45%, rgba(7, 26, 18, 0.68) 100%);
 }
 
