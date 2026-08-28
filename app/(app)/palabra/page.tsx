@@ -6,14 +6,10 @@ import { PASSAGES } from "@/lib/seeds/content";
 import {
   BIBLE_VERSION_LABELS,
   CHAPTERS,
+  type BibleVerse,
   type BibleVersion,
 } from "@/lib/seeds/bible-chapters";
-import {
-  EPHESIANS,
-  EPHESIANS_BOOK_KEY,
-  EPHESIANS_CHAPTER_COUNT,
-  EPHESIANS_INTRO,
-} from "@/lib/seeds/ephesians";
+import { getNTBook, NT_BOOKS } from "@/lib/seeds/nt-books";
 import { todayISO, weekdayIndex } from "@/lib/plan-calendar";
 import { GlassCard, PageHeader, PrimaryButton, SecondaryButton, TextArea } from "@/components/ui/Glass";
 import { ArchiveItem, ArchiveSection, SaveBanner } from "@/components/ui/Archive";
@@ -22,8 +18,12 @@ import { NotesEditor } from "@/components/palabra/NotesEditor";
 import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 
 const VERSION_STORAGE_KEY = "bosque.bibleVersion";
+const BOOK_STORAGE_KEY = "bosque.bibleBook";
 
 type ReaderView = BibleVersion | "paralela";
+
+/** Texto de un libro completo: capítulo → versículos, por versión. */
+type BookTexts = Record<BibleVersion, Record<string, BibleVerse[]>>;
 
 const HIGHLIGHTS: { key: string; label: string; swatch: string; verse: string }[] = [
   { key: "yellow", label: "Amarillo", swatch: "bg-yellow-300", verse: "verse-hl-yellow" },
@@ -47,6 +47,17 @@ function loadView(): ReaderView {
   return "rvr1960";
 }
 
+function loadBook(): string {
+  if (typeof window === "undefined") return "efesios";
+  try {
+    const v = localStorage.getItem(BOOK_STORAGE_KEY);
+    if (v && NT_BOOKS.some((b) => b.key === v)) return v;
+  } catch {
+    /* ignore */
+  }
+  return "efesios";
+}
+
 export default function PalabraPage() {
   const {
     data,
@@ -65,6 +76,7 @@ export default function PalabraPage() {
   const [done, setDone] = useState(!!existing?.done);
 
   /* ---------- Estudio: estado ---------- */
+  const [bookKey, setBookKey] = useState("efesios");
   const [chapterNum, setChapterNum] = useState(1);
   const [view, setView] = useState<ReaderView>("rvr1960");
   const [mobilePanel, setMobilePanel] = useState<"biblia" | "notas">("biblia");
@@ -75,9 +87,48 @@ export default function PalabraPage() {
   const [commentDraft, setCommentDraft] = useState("");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ---------- Texto del libro (JSON estático) ---------- */
+  const [bookTexts, setBookTexts] = useState<BookTexts | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadRetry, setLoadRetry] = useState(0);
+  const textsCache = useRef<Map<string, BookTexts>>(new Map());
+
+  const book = getNTBook(bookKey);
+
   useEffect(() => {
     setView(loadView());
+    setBookKey(loadBook());
   }, []);
+
+  useEffect(() => {
+    const cached = textsCache.current.get(bookKey);
+    if (cached) {
+      setBookTexts(cached);
+      setLoadError(false);
+      return;
+    }
+    let cancelled = false;
+    setBookTexts(null);
+    setLoadError(false);
+    const loadVersion = async (v: BibleVersion): Promise<Record<string, BibleVerse[]>> => {
+      const res = await fetch(`/bible/${v}/${bookKey}.json`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${v}/${bookKey}`);
+      return res.json();
+    };
+    Promise.all([loadVersion("rvr1960"), loadVersion("ntv")])
+      .then(([rvr1960, ntv]) => {
+        if (cancelled) return;
+        const texts: BookTexts = { rvr1960, ntv };
+        textsCache.current.set(bookKey, texts);
+        setBookTexts(texts);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookKey, loadRetry]);
 
   const selectView = (v: ReaderView) => {
     setView(v);
@@ -88,32 +139,49 @@ export default function PalabraPage() {
     }
   };
 
-  const chapterVerses = EPHESIANS[chapterNum];
+  const selectBook = (key: string) => {
+    setBookKey(key);
+    setChapterNum(1);
+    setSelectedVerse(null);
+    setCommentDraft("");
+    try {
+      localStorage.setItem(BOOK_STORAGE_KEY, key);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const chapterVerses: Record<BibleVersion, BibleVerse[]> | null = bookTexts
+    ? {
+        rvr1960: bookTexts.rvr1960[String(chapterNum)] ?? [],
+        ntv: bookTexts.ntv[String(chapterNum)] ?? [],
+      }
+    : null;
 
   const marksForChapter = useMemo(
     () =>
       (data.verse_marks || []).filter(
-        (m) => m.book_key === EPHESIANS_BOOK_KEY && m.chapter === chapterNum
+        (m) => m.book_key === bookKey && m.chapter === chapterNum
       ),
-    [data.verse_marks, chapterNum]
+    [data.verse_marks, bookKey, chapterNum]
   );
   const markFor = (verse: number) => marksForChapter.find((m) => m.verse === verse);
 
   const savedNote = useMemo(
     () =>
       (data.study_notes || []).find(
-        (n) => n.book_key === EPHESIANS_BOOK_KEY && n.chapter === chapterNum
+        (n) => n.book_key === bookKey && n.chapter === chapterNum
       ),
-    [data.study_notes, chapterNum]
+    [data.study_notes, bookKey, chapterNum]
   );
 
-  // Cargar nota del capítulo al cambiar de capítulo o llegar data de la nube
+  // Cargar nota del capítulo al cambiar de libro/capítulo o llegar data de la nube
   useEffect(() => {
     setNoteText(savedNote?.content ?? "");
     setNoteDirty(false);
     setSelectedVerse(null);
     setCommentDraft("");
-  }, [chapterNum, savedNote?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bookKey, chapterNum, savedNote?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autosave de notas con debounce (commit ya sincroniza local + nube)
   const onNoteChange = (v: string) => {
@@ -121,7 +189,7 @@ export default function PalabraPage() {
     setNoteDirty(true);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveStudyNote(EPHESIANS_BOOK_KEY, chapterNum, v);
+      saveStudyNote(bookKey, chapterNum, v);
       setNoteDirty(false);
     }, 900);
   };
@@ -137,7 +205,7 @@ export default function PalabraPage() {
   const applyHighlight = (color: string) => {
     if (selectedVerse == null) return;
     saveVerseMark({
-      book_key: EPHESIANS_BOOK_KEY,
+      book_key: bookKey,
       chapter: chapterNum,
       verse: selectedVerse,
       color,
@@ -148,7 +216,7 @@ export default function PalabraPage() {
   const saveComment = () => {
     if (selectedVerse == null) return;
     saveVerseMark({
-      book_key: EPHESIANS_BOOK_KEY,
+      book_key: bookKey,
       chapter: chapterNum,
       verse: selectedVerse,
       color: selectedMark?.color ?? "",
@@ -200,7 +268,7 @@ export default function PalabraPage() {
   const verseEditor = selectedVerse != null && (
     <div className="sticky bottom-0 mt-3 rounded-xl border border-primary/30 bg-surface-raised p-3 space-y-2.5 shadow-lg">
       <p className="text-xs font-semibold text-ink">
-        Efesios {chapterNum}:{selectedVerse}
+        {book.name} {chapterNum}:{selectedVerse}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-muted uppercase tracking-wide">Subrayar</span>
@@ -244,7 +312,7 @@ export default function PalabraPage() {
     <div className="space-y-5">
       <PageHeader
         title="Palabra · Estudio"
-        subtitle="Estudio de Efesios: lee, subraya, comenta y toma notas. Todo queda guardado."
+        subtitle={`Estudio de ${book.name}: lee, subraya, comenta y toma notas. Todo queda guardado.`}
       />
 
       {/* Contexto e introducción */}
@@ -256,7 +324,7 @@ export default function PalabraPage() {
           aria-expanded={introOpen}
         >
           <div>
-            <h2 className="text-base font-semibold text-ink">{EPHESIANS_INTRO.title}</h2>
+            <h2 className="text-base font-semibold text-ink">{book.intro.title}</h2>
             <p className="text-xs text-muted">Autor, propósito, temas y bosquejo del libro</p>
           </div>
           {introOpen ? (
@@ -269,20 +337,20 @@ export default function PalabraPage() {
           <div className="space-y-3 text-sm text-ink leading-relaxed border-t border-line pt-3">
             <p>
               <span className="font-medium">Autor y fecha: </span>
-              {EPHESIANS_INTRO.author}
+              {book.intro.author}
             </p>
             <p>
               <span className="font-medium">Destinatarios: </span>
-              {EPHESIANS_INTRO.audience}
+              {book.intro.audience}
             </p>
             <p>
               <span className="font-medium">Propósito: </span>
-              {EPHESIANS_INTRO.purpose}
+              {book.intro.purpose}
             </p>
             <div>
               <p className="font-medium mb-1">Temas clave</p>
               <ul className="list-disc pl-5 space-y-0.5 text-muted">
-                {EPHESIANS_INTRO.themes.map((t) => (
+                {book.intro.themes.map((t) => (
                   <li key={t}>{t}</li>
                 ))}
               </ul>
@@ -290,7 +358,7 @@ export default function PalabraPage() {
             <div>
               <p className="font-medium mb-1">Bosquejo</p>
               <ul className="space-y-0.5 text-muted">
-                {EPHESIANS_INTRO.outline.map((o) => (
+                {book.intro.outline.map((o) => (
                   <li key={o.ch}>
                     <span className="text-primary font-medium">Cap. {o.ch}:</span> {o.label}
                   </li>
@@ -301,11 +369,22 @@ export default function PalabraPage() {
         )}
       </GlassCard>
 
-      {/* Selector de capítulo */}
+      {/* Selector de libro y capítulo */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted uppercase tracking-wide">Efesios</span>
-        <div className="inline-flex rounded-xl border border-line bg-surface-soft p-0.5">
-          {Array.from({ length: EPHESIANS_CHAPTER_COUNT }, (_, i) => i + 1).map((c) => {
+        <select
+          value={bookKey}
+          onChange={(e) => selectBook(e.target.value)}
+          className="input-field !w-auto min-w-[10.5rem] !py-1.5 text-sm font-medium"
+          aria-label="Libro del Nuevo Testamento"
+        >
+          {NT_BOOKS.map((b) => (
+            <option key={b.key} value={b.key}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        <div className="inline-flex flex-wrap rounded-xl border border-line bg-surface-soft p-0.5">
+          {Array.from({ length: book.chapters }, (_, i) => i + 1).map((c) => {
             const active = chapterNum === c;
             return (
               <button
@@ -357,7 +436,9 @@ export default function PalabraPage() {
           className={`space-y-3 ${mobilePanel === "biblia" ? "" : "hidden"} lg:block`}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-ink">Efesios {chapterNum}</h3>
+            <h3 className="text-sm font-semibold text-ink">
+              {book.name} {chapterNum}
+            </h3>
             <div className="inline-flex rounded-xl border border-line bg-surface-soft p-0.5">
               {(["rvr1960", "ntv", "paralela"] as const).map((v) => {
                 const active = view === v;
@@ -387,29 +468,50 @@ export default function PalabraPage() {
             className="bible-reader rounded-xl border border-black/10 bg-white px-3.5 py-4 sm:px-5 sm:py-5 max-h-[min(70vh,40rem)] overflow-y-auto"
             style={{ WebkitOverflowScrolling: "touch", color: "#111111" }}
           >
-            {view === "paralela" ? (
+            {loadError ? (
+              <div className="space-y-2">
+                <p className="text-sm text-black/60">
+                  No se pudo cargar el texto de {book.name}. Revisa tu conexión.
+                </p>
+                <SecondaryButton onClick={() => setLoadRetry((n) => n + 1)}>
+                  Reintentar
+                </SecondaryButton>
+              </div>
+            ) : !chapterVerses ? (
+              <p className="text-sm text-black/60">Cargando {book.name}…</p>
+            ) : view === "paralela" ? (
               <div className="space-y-3">
-                {chapterVerses.rvr1960.map((rv, i) => (
-                  <div key={rv.n} className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wide text-black/40 mb-0.5">
-                        RVR 1960
-                      </p>
-                      {verseRow(rv.n, rv.t, "rvr")}
+                {(() => {
+                  // NTV omite algunos versículos (p.ej. Mt 17:21); alinear por número, no por índice
+                  const ntvByNum = new Map(chapterVerses.ntv.map((v) => [v.n, v.t]));
+                  return chapterVerses.rvr1960.map((rv) => (
+                    <div key={rv.n} className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-black/40 mb-0.5">
+                          RVR 1960
+                        </p>
+                        {verseRow(rv.n, rv.t, "rvr")}
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-black/40 mb-0.5">
+                          NTV
+                        </p>
+                        {ntvByNum.has(rv.n) ? (
+                          verseRow(rv.n, ntvByNum.get(rv.n) ?? "", "ntv")
+                        ) : (
+                          <p className="leading-[1.75] text-[13px] text-black/35 italic px-1 -mx-1">
+                            (versículo no presente en NTV)
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wide text-black/40 mb-0.5">
-                        NTV
-                      </p>
-                      {verseRow(rv.n, chapterVerses.ntv[i]?.t ?? "", "ntv")}
-                    </div>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             ) : (
               <div className="space-y-2.5">
                 <p className="text-[11px] uppercase tracking-wider font-medium mb-2 text-black/55">
-                  Efesios {chapterNum} · {BIBLE_VERSION_LABELS[view]}
+                  {book.name} {chapterNum} · {BIBLE_VERSION_LABELS[view]}
                 </p>
                 {chapterVerses[view].map((v) => verseRow(v.n, v.t))}
               </div>
@@ -428,7 +530,7 @@ export default function PalabraPage() {
         >
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-ink">
-              Mis notas · Efesios {chapterNum}
+              Mis notas · {book.name} {chapterNum}
             </h3>
             {noteStatus && <span className="text-[11px] text-primary-bright">{noteStatus}</span>}
           </div>
