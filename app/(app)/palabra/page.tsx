@@ -315,6 +315,47 @@ export default function PalabraPage() {
         subtitle={`Estudio de ${book.name}: lee, subraya, comenta y toma notas. Todo queda guardado.`}
       />
 
+      <GlassCard className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Biblioteca bíblica</h2>
+            <p className="text-sm text-primary font-medium">
+              Nuevo Testamento · {NT_BOOKS.length} libros disponibles
+            </p>
+          </div>
+          <a href="#lectura-del-dia" className="text-sm text-primary underline underline-offset-4">
+            Ir a la lectura del día
+          </a>
+        </div>
+        <p className="text-sm text-muted">
+          Lee todos sus capítulos en RVR 1960 o NTV, compara ambas versiones y
+          estudia con introducciones, subrayados, comentarios y notas personales.
+          Elige un libro para comenzar.
+        </p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Libros disponibles">
+          {NT_BOOKS.map((availableBook) => (
+            <button
+              key={availableBook.key}
+              type="button"
+              onClick={() => selectBook(availableBook.key)}
+              aria-pressed={bookKey === availableBook.key}
+              className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
+                bookKey === availableBook.key
+                  ? "border-primary bg-primary font-semibold"
+                  : "border-line bg-surface-soft text-ink hover:bg-surface-raised/60"
+              }`}
+              style={bookKey === availableBook.key ? { color: "#ffffff" } : undefined}
+            >
+              {availableBook.name}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted border-t border-line pt-3">
+          Antiguo Testamento: todavía no está disponible como biblioteca completa.
+          El plan semanal incluye únicamente los Salmos 23, 91 y 51.
+        </p>
+      </GlassCard>
+
       {/* Contexto e introducción */}
       <GlassCard className="space-y-3">
         <button
@@ -545,7 +586,10 @@ export default function PalabraPage() {
         </GlassCard>
       </div>
 
-      {/* Lectura del plan de hoy (sin cambios de lógica) */}
+      <div id="lectura-del-dia" className="scroll-mt-24">
+        <h2 className="text-lg font-semibold text-ink">Lectura del día</h2>
+        <p className="text-sm text-muted">Una lectura del plan semanal, independiente del libro que estás estudiando.</p>
+      </div>
       <GlassCard className="space-y-4">
         <div className="flex items-start justify-between gap-2">
           <div>

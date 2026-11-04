@@ -34,7 +34,7 @@ Abre [http://localhost:3000](http://localhost:3000).
 | `/` | Dashboard, fase 90 días, frase de temporada, acciones del día |
 | `/rutina` | Checklist mañana / propósito / tarde / noche |
 | `/verdades` | 19 verdades + personalizadas, sesiones mañana/mediodía/noche |
-| `/palabra` | Plan semanal de Escritura + frase guardada |
+| `/palabra` | Biblioteca visible de los 27 libros del Nuevo Testamento (RVR 1960 y NTV), introducciones y notas; lectura del día separada del estudio |
 | `/panico` | Protocolo 10 min, respiración 4-4-4-4, historial |
 | `/diario` | 3 líneas + nota semanal |
 | `/santidad` | Líneas no negociables + log de luz |
